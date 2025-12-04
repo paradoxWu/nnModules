@@ -57,6 +57,21 @@ class gMLPEncoder(nn.Module):
             x = blk(x, mask)
         return self.norm(x)
 
+class Expand_gMLP(nn.Module):
+    def __init__(self, feature, sq_len, out_d, hidden_size=128, num_layers=3):
+        super().__init__()
+        self.expand = nn.Linear(feature, hidden_size)
+        self.gmlp = gMLPEncoder(hidden_size, sq_len, hidden_size, num_layers=num_layers)
+        self.compress = nn.Linear(hidden_size, out_d)
+        # self.pool = nn.AdaptiveAvgPool1d(1)  # 沿 N 维平均，再 Linear
+
+    def forward(self, x, mask):
+        x = self.expand(x)
+        x = self.gmlp(x, mask)
+        x = self.compress(x)
+        x = x.mean(dim=2)
+        # x = self.pool(x).squeeze(-1)          # (B,T,d_out)
+        return x 
 
 if __name__ == "__main__":
     mock_input_0 = torch.randn(128, 31, 39, 9)
